@@ -4,12 +4,12 @@ import io.qameta.allure.Description;
 import io.qameta.allure.junit4.DisplayName;
 import io.restassured.RestAssured;
 import io.restassured.response.Response;
+import org.apache.http.HttpStatus;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
-import static io.restassured.RestAssured.given;
 import static org.example.Constants.*;
 import static org.hamcrest.Matchers.notNullValue;
 
@@ -41,7 +41,7 @@ public class CreatingOrderTest {
 
     @Before
     public void setUp() {
-        RestAssured.baseURI = baseURL;
+        RestAssured.baseURI = BASE_URL;
     }
 
     @Test
@@ -54,13 +54,11 @@ public class CreatingOrderTest {
         } else {
             createOrder = new CreateOrder(firstName, lastName, address, metroStation, phone, rentTime, deliveryDate, comment, color);
         }
-        Response response = given()
-                .header(headerType, headerJson)
-                .body(createOrder)
-                .post(orders);
+        Response response = OrderApi.sendPostRequestOrder(createOrder);
+
         response.then().assertThat()
                 .body("track", notNullValue())
                 .and()
-                .statusCode(201);
+                .statusCode(HttpStatus.SC_CREATED);
     }
 }

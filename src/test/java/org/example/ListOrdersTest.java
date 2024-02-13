@@ -9,6 +9,8 @@ import org.junit.Test;
 
 import static io.restassured.RestAssured.given;
 import static org.example.Constants.*;
+import static org.example.CourierApi.*;
+import static org.example.OrderApi.*;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -16,15 +18,14 @@ import static org.junit.Assert.assertTrue;
 public class ListOrdersTest {
     @Before
     public void setUp() {
-        RestAssured.baseURI = baseURL;
+        RestAssured.baseURI = BASE_URL;
     }
 
     @Test
     @DisplayName("Получение списка заказов без параметров")
     @Description("Проверка, что получаем список заказов")
     public void listOrdersWithoutParameters() {
-        Response response = given()
-                .get(orders);
+        Response response = sendGetRequestCourier();
         response.then().assertThat().body("orders", notNullValue());
     }
 
@@ -35,9 +36,7 @@ public class ListOrdersTest {
         String stationOne = "10";
         String stationTwo = "121";
         String parameters = "?nearestStation=[\"" + stationOne + "\", \"" + stationTwo + "\"]";
-        ListOrders listOrders = given()
-                .get(orders + parameters)
-                .body().as(ListOrders.class);
+        ListOrders listOrders = sendGetRequestCourier(parameters);
         String resultOne = listOrders.getAvailableStations().get(0).getNumber();
         String resultTwo = listOrders.getAvailableStations().get(1).getNumber();
         assertEquals(stationOne, resultOne);
@@ -50,7 +49,7 @@ public class ListOrdersTest {
     public void listOrdersWithLimit() {
         int limit = 5;
         ListOrders listOrders = given()
-                .get(orders + "?limit=" + limit)
+                .get(ORDERS + "?limit=" + limit)
                 .body().as(ListOrders.class);
         int resultResponseOrders = listOrders.getOrders().size();
         int resultLimit = listOrders.getPageInfo().getLimit();
@@ -64,7 +63,7 @@ public class ListOrdersTest {
     public void listOrdersWithPage() {
         int page = 2;
         ListOrders listOrders = given()
-                .get(orders + "?page=" + page)
+                .get(ORDERS + "?page=" + page)
                 .body().as(ListOrders.class);
         int resultPage = listOrders.getPageInfo().getPage();
         assertEquals(page, resultPage);
@@ -75,21 +74,18 @@ public class ListOrdersTest {
     @Description("Проверка, что получаем список заказов указанного курьера")
     public void listOrdersWithCourierId() {
         //Создаем нового курьера
-        NewCourier courier = new NewCourier(login, password, "Abu");
-        given().header(headerType, headerJson).body(courier).post(createCourier);
+        NewCourier courier = new NewCourier(LOGIN, PASSWORD, "Abu");
+        sendPostCreateCourier(courier);
         //Получаем ID созданного курьера
-        Login newLogin = new Login(login, password);
-        String id = given()
-                .header(headerType, headerJson)
-                .body(newLogin)
-                .post(loginCourier)
-                .body().as(CourierID.class).getId();
+        Login newLogin = new Login(LOGIN, PASSWORD);
+        Response response = sendPostLoginCourier(newLogin);
+        String id = getCourierID(response);
         //Получаем список заказов для созданного курьера (проверяем, что заказов нет)
         ListOrders listOrders = given()
-                .get(orders + "?courierId=" + id)
+                .get(ORDERS + "?courierId=" + id)
                 .body().as(ListOrders.class);
         assertTrue(listOrders.getOrders().isEmpty());
         //Удаляем созданного курьера
-        given().delete(deleteCourier + id);
+        deleteCourierByID(id);
     }
 }
